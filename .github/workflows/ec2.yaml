@@ -1,0 +1,65 @@
+name: Terraform AWS
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      terraform_action:
+        description: "Choose Terraform action"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan
+          - apply
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # 3. Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      # 4. Terraform Init
+      - name: Terraform Init
+        run: terraform init
+
+      # 5. Terraform Format
+      - name: Terraform Format
+        run: terraform fmt 
+
+      # 6. Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+
+              # 7. Import existing EC2 instance
+    #  - name: Terraform Import EC2
+    #    run: terraform import aws_instance.web_server1 i-0cb675901f55d6620
+
+      # 7. Terraform Plan
+      - name: Terraform Plan
+        if: ${{ inputs.terraform_action == 'plan' || inputs.terraform_action == 'apply' || github.event_name == 'push' }}
+        run: terraform plan
+
+      # 8. Terraform Apply
+      - name: Terraform Apply
+        if: ${{ inputs.terraform_action == 'apply' }}
+        run: terraform apply -auto-approve
